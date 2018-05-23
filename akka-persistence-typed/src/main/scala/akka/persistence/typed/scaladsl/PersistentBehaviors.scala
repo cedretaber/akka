@@ -12,8 +12,13 @@ import akka.persistence.typed.internal._
 
 object PersistentBehaviors {
 
-  // we use this type internally, however it's easier for users to understand the function, so we use it in external api
+  // We don't use this in API signatures because it's easier to see (in IDE) what is needed
+  // when full function type is used. Sometimes it's useful to have the shorter type signature though.
   type CommandHandler[Command, Event, State] = (ActorContext[Command], State, Command) ⇒ Effect[Event, State]
+
+  // We don't use this in API signatures because it's easier to see (in IDE) what is needed
+  // when full function type is used. Sometimes it's useful to have the shorter type signature though.
+  type EventHandler[State, Event] = (State, Event) ⇒ State
 
   /**
    * Create a `Behavior` for a persistent actor.
@@ -21,15 +26,23 @@ object PersistentBehaviors {
   def receive[Command, Event, State](
     persistenceId:  String,
     initialState:   State,
-    commandHandler: CommandHandler[Command, Event, State],
+    commandHandler: (ActorContext[Command], State, Command) ⇒ Effect[Event, State],
     eventHandler:   (State, Event) ⇒ State): PersistentBehavior[Command, Event, State] =
     PersistentBehaviorImpl(persistenceId, initialState, commandHandler, eventHandler)
 
   /**
-   * The `CommandHandler` defines how to act on commands.
+   * The `CommandHandler` defines how to act on commands. A `CommandHandler` is
+   * a function:
+   *
+   * {{{
+   *   (ActorContext[Command], State, Command) ⇒ Effect[Event, State]
+   * }}}
    *
    * Note that you can have different command handlers based on current state by using
    * [[CommandHandler#byState]].
+   *
+   * The [[CommandHandler#command]] is useful for simple commands that don't need the state
+   * and context.
    */
   object CommandHandler {
 
@@ -38,14 +51,16 @@ object PersistentBehaviors {
      *
      * @see [[Effect]] for possible effects of a command.
      */
-    def command[Command, Event, State](commandHandler: Command ⇒ Effect[Event, State]): CommandHandler[Command, Event, State] =
+    def command[Command, Event, State](commandHandler: Command ⇒ Effect[Event, State]): (ActorContext[Command], State, Command) ⇒ Effect[Event, State] =
       (_, _, cmd) ⇒ commandHandler(cmd)
 
     /**
      * Select different command handlers based on current state.
      */
-    def byState[Command, Event, State](choice: State ⇒ CommandHandler[Command, Event, State]): CommandHandler[Command, Event, State] =
+    def byState[Command, Event, State](
+      choice: State ⇒ (ActorContext[Command], State, Command) ⇒ Effect[Event, State]): (ActorContext[Command], State, Command) ⇒ Effect[Event, State] = {
       new ByStateCommandHandler(choice)
+    }
 
   }
 

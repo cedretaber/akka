@@ -52,7 +52,7 @@ object InDepthPersistentBehaviorSpec {
   //#commands
 
   //#initial-command-handler
-  private def initial: CommandHandler[BlogCommand, BlogEvent, BlogState] =
+  private val initial: CommandHandler[BlogCommand, BlogEvent, BlogState] =
     (ctx, state, cmd) ⇒
       cmd match {
         case AddPost(content, replyTo) ⇒
@@ -69,7 +69,7 @@ object InDepthPersistentBehaviorSpec {
   //#initial-command-handler
 
   //#post-added-command-handler
-  private def postAdded: CommandHandler[BlogCommand, BlogEvent, BlogState] = {
+  private val postAdded: CommandHandler[BlogCommand, BlogEvent, BlogState] = {
     (ctx, state, cmd) ⇒
       cmd match {
         case ChangeBody(newBody, replyTo) ⇒
@@ -94,14 +94,15 @@ object InDepthPersistentBehaviorSpec {
   //#post-added-command-handler
 
   //#by-state-command-handler
-  private def commandHandler: CommandHandler[BlogCommand, BlogEvent, BlogState] = CommandHandler.byState {
-    case state if state.isEmpty  ⇒ initial
-    case state if !state.isEmpty ⇒ postAdded
-  }
+  private val commandHandler: CommandHandler[BlogCommand, BlogEvent, BlogState] =
+    CommandHandler.byState {
+      case state if state.isEmpty  ⇒ initial
+      case state if !state.isEmpty ⇒ postAdded
+    }
   //#by-state-command-handler
 
   //#event-handler
-  private def eventHandler(state: BlogState, event: BlogEvent): BlogState =
+  private val eventHandler: (BlogState, BlogEvent) ⇒ BlogState = { (state, event) ⇒
     event match {
       case PostAdded(postId, content) ⇒
         state.withContent(content)
@@ -115,6 +116,7 @@ object InDepthPersistentBehaviorSpec {
       case Published(_) ⇒
         state.copy(published = true)
     }
+  }
   //#event-handler
 
   //#behavior
